@@ -26,7 +26,7 @@ const App: React.FC = () => {
         URL.revokeObjectURL(state.fileUrl);
       }
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        window.clearInterval(timerRef.current);
       }
     };
   }, [state.fileUrl]);
@@ -40,14 +40,14 @@ const App: React.FC = () => {
       }, 1000);
     } else if (state.status === TranslationStatus.COMPLETED || state.status === TranslationStatus.ERROR) {
       if (timerRef.current) {
-        clearInterval(timerRef.current);
+        window.clearInterval(timerRef.current);
       }
     } else {
       setElapsedSeconds(0);
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) window.clearInterval(timerRef.current);
     };
   }, [state.status]);
 
@@ -120,7 +120,7 @@ const App: React.FC = () => {
 
   const handleDownload = () => {
     const element = document.createElement("a");
-    // Adding a BOM for proper UTF-8 handling in some editors, though not strictly necessary for modern ones
+    // Adding a BOM for proper UTF-8 handling
     const file = new Blob(["\uFEFF" + state.translatedText], { type: 'text/markdown;charset=utf-8' });
     element.href = URL.createObjectURL(file);
     element.download = `Translated_${state.originalFile?.name.replace('.pdf', '') || 'Book'}_Arabic.md`;
@@ -155,24 +155,16 @@ const App: React.FC = () => {
           {state.status === TranslationStatus.TRANSLATING && (
             <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100">
               <Clock size={14} className="animate-pulse" />
-              <span>{formatTime(elapsedSeconds)}</span>
+              <span>Translating: {formatTime(elapsedSeconds)}</span>
             </div>
           )}
           
           {state.status === TranslationStatus.COMPLETED && (
             <div className="flex items-center space-x-2 mr-2">
-              <div className="flex items-center space-x-1 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full text-sm font-medium">
+              <div className="flex items-center space-x-1 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full text-sm font-medium border border-emerald-100">
                 <Clock size={14} />
-                <span>Total: {formatTime(elapsedSeconds)}</span>
+                <span>Time: {formatTime(elapsedSeconds)}</span>
               </div>
-              <Button 
-                variant="secondary" 
-                onClick={handleDownload} 
-                icon={<Download size={18} />}
-                className="shadow-md shadow-emerald-200"
-              >
-                Download Book
-              </Button>
             </div>
           )}
           
@@ -199,7 +191,7 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold text-slate-900">Translate Books with AI</h2>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                  Upload PDF books up to 200MB. Our tool translates content to Arabic, preserving structure and describing images.
+                  Upload PDF books up to 200MB. Our tool translates content to Arabic, preserving structure, formatting, and describing images.
                 </p>
               </div>
               <FileUpload 
@@ -208,9 +200,9 @@ const App: React.FC = () => {
               />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-left">
                 {[
-                  { title: "Huge Files Supported", desc: "Upload books up to 200MB without issues." },
-                  { title: "Full Context", desc: "Preserves chapters, headers, and describes images." },
-                  { title: "Real-time AI", desc: "Watch the translation happen live with progress tracking." }
+                  { title: "200MB File Support", desc: "Upload huge books without worrying about size limits." },
+                  { title: "Full Structure", desc: "Chapters, tables, and image descriptions are preserved." },
+                  { title: "Live Timer", desc: "Track the translation progress in real-time." }
                 ].map((item, i) => (
                   <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="font-semibold text-slate-900 mb-2">{item.title}</h3>
@@ -316,9 +308,15 @@ const App: React.FC = () => {
                           </div>
                         )}
                         {state.status === TranslationStatus.COMPLETED && (
-                          <div className="mt-8 p-4 bg-emerald-50 rounded-lg text-center">
-                            <p className="text-emerald-700 font-medium mb-3">Translation Completed!</p>
-                            <Button onClick={handleDownload} variant="secondary" icon={<Download size={16}/>}>
+                          <div className="mt-12 p-8 bg-emerald-50 rounded-2xl border border-emerald-100 text-center animate-fade-in">
+                            <CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
+                            <h3 className="text-2xl font-bold text-emerald-800 mb-2">Translation Complete!</h3>
+                            <p className="text-emerald-600 mb-6">Your book has been successfully translated to Arabic.</p>
+                            <Button 
+                              onClick={handleDownload} 
+                              className="w-full max-w-sm py-4 text-lg bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-transform hover:scale-105" 
+                              icon={<Download size={24}/>}
+                            >
                                Download Translated Book
                             </Button>
                           </div>
