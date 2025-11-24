@@ -1,0 +1,5 @@
+{
+  "name": "GeminiBook Translator",
+  "description": "A powerful tool to translate large English books (PDF) to Arabic using Gemini 2.5 Flash / Pro, preserving structure and context.",
+  "requestFramePermissions": []
+}
