@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Download, RefreshCw, AlertTriangle, ArrowRight, Loader2 } from 'lucide-react';
+import { BookOpen, Download, RefreshCw, AlertTriangle, ArrowRight, Loader2, Clock, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 import { FileUpload } from './components/FileUpload';
@@ -16,14 +16,46 @@ const App: React.FC = () => {
     errorMessage: null,
   });
 
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
   // Cleanup object URL on unmount
   useEffect(() => {
     return () => {
       if (state.fileUrl) {
         URL.revokeObjectURL(state.fileUrl);
       }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [state.fileUrl]);
+
+  // Timer Logic
+  useEffect(() => {
+    if (state.status === TranslationStatus.TRANSLATING) {
+      const startTime = Date.now();
+      timerRef.current = window.setInterval(() => {
+        setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    } else if (state.status === TranslationStatus.COMPLETED || state.status === TranslationStatus.ERROR) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    } else {
+      setElapsedSeconds(0);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [state.status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleFileSelect = (file: File) => {
     const url = URL.createObjectURL(file);
@@ -34,6 +66,7 @@ const App: React.FC = () => {
       translatedText: '',
       errorMessage: null,
     });
+    setElapsedSeconds(0);
   };
 
   const handleStartTranslation = async () => {
@@ -87,9 +120,10 @@ const App: React.FC = () => {
 
   const handleDownload = () => {
     const element = document.createElement("a");
-    const file = new Blob([state.translatedText], { type: 'text/markdown' });
+    // Adding a BOM for proper UTF-8 handling in some editors, though not strictly necessary for modern ones
+    const file = new Blob(["\uFEFF" + state.translatedText], { type: 'text/markdown;charset=utf-8' });
     element.href = URL.createObjectURL(file);
-    element.download = `Arabic_Translation_${state.originalFile?.name.replace('.pdf', '') || 'doc'}.md`;
+    element.download = `Translated_${state.originalFile?.name.replace('.pdf', '') || 'Book'}_Arabic.md`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -103,6 +137,7 @@ const App: React.FC = () => {
       translatedText: '',
       errorMessage: null,
     });
+    setElapsedSeconds(0);
   };
 
   return (
@@ -117,15 +152,30 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {state.status === TranslationStatus.COMPLETED && (
-            <Button 
-              variant="secondary" 
-              onClick={handleDownload} 
-              icon={<Download size={18} />}
-            >
-              Download Arabic
-            </Button>
+          {state.status === TranslationStatus.TRANSLATING && (
+            <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-100">
+              <Clock size={14} className="animate-pulse" />
+              <span>{formatTime(elapsedSeconds)}</span>
+            </div>
           )}
+          
+          {state.status === TranslationStatus.COMPLETED && (
+            <div className="flex items-center space-x-2 mr-2">
+              <div className="flex items-center space-x-1 text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full text-sm font-medium">
+                <Clock size={14} />
+                <span>Total: {formatTime(elapsedSeconds)}</span>
+              </div>
+              <Button 
+                variant="secondary" 
+                onClick={handleDownload} 
+                icon={<Download size={18} />}
+                className="shadow-md shadow-emerald-200"
+              >
+                Download Book
+              </Button>
+            </div>
+          )}
+          
           {state.originalFile && (
              <Button 
                variant="outline" 
@@ -149,7 +199,7 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 <h2 className="text-4xl font-bold text-slate-900">Translate Books with AI</h2>
                 <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                  Upload PDF books up to 200MB. Our tool translates content to Arabic while allowing you to view the original images and layout side-by-side.
+                  Upload PDF books up to 200MB. Our tool translates content to Arabic, preserving structure and describing images.
                 </p>
               </div>
               <FileUpload 
@@ -158,9 +208,9 @@ const App: React.FC = () => {
               />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-left">
                 {[
-                  { title: "Large Files", desc: "Support for files up to 200MB." },
-                  { title: "Preserves Context", desc: "Original file view ensures you never lose visual context (images, charts)." },
-                  { title: "AI Powered", desc: "Uses Google Gemini 3 Pro for high-quality book translations." }
+                  { title: "Huge Files Supported", desc: "Upload books up to 200MB without issues." },
+                  { title: "Full Context", desc: "Preserves chapters, headers, and describes images." },
+                  { title: "Real-time AI", desc: "Watch the translation happen live with progress tracking." }
                 ].map((item, i) => (
                   <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                     <h3 className="font-semibold text-slate-900 mb-2">{item.title}</h3>
@@ -184,15 +234,11 @@ const App: React.FC = () => {
               </div>
               <div className="flex-1 relative">
                  {state.fileUrl ? (
-                   <object
-                     data={state.fileUrl}
-                     type="application/pdf"
-                     className="w-full h-full"
-                   >
-                     <div className="flex items-center justify-center h-full text-slate-500">
-                       <p>PDF preview not available. Please download to view.</p>
-                     </div>
-                   </object>
+                   <iframe
+                     src={state.fileUrl}
+                     title="PDF Viewer"
+                     className="w-full h-full border-none"
+                   />
                  ) : (
                    <div className="flex items-center justify-center h-full">
                      <Loader2 className="animate-spin text-slate-400" />
@@ -209,6 +255,12 @@ const App: React.FC = () => {
                    <span className="flex items-center gap-2 animate-pulse">
                      <Loader2 size={12} className="animate-spin" />
                      Translating...
+                   </span>
+                )}
+                {state.status === TranslationStatus.COMPLETED && (
+                   <span className="flex items-center gap-2 text-emerald-600">
+                     <CheckCircle size={14} />
+                     Completed
                    </span>
                 )}
               </div>
@@ -247,20 +299,28 @@ const App: React.FC = () => {
                   {state.status === TranslationStatus.READING_FILE && (
                     <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-4">
                        <Loader2 size={40} className="animate-spin text-blue-500" />
-                       <p>Reading file contents...</p>
+                       <p>Reading file contents... (Large files may take a moment)</p>
                     </div>
                   )}
                   
                   {(state.status === TranslationStatus.TRANSLATING || state.status === TranslationStatus.COMPLETED) && (
-                     <div className="prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-800">
+                     <div className="prose prose-lg prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-800 prose-img:rounded-xl">
                         <ReactMarkdown>
                           {state.translatedText || "Generating translation..."}
                         </ReactMarkdown>
                         {state.status === TranslationStatus.TRANSLATING && (
-                          <div className="mt-4 flex justify-center">
+                          <div className="mt-8 flex justify-center py-4 border-t border-slate-100">
                             <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-bounce mx-1"></span>
                             <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-bounce mx-1 delay-100"></span>
                             <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-bounce mx-1 delay-200"></span>
+                          </div>
+                        )}
+                        {state.status === TranslationStatus.COMPLETED && (
+                          <div className="mt-8 p-4 bg-emerald-50 rounded-lg text-center">
+                            <p className="text-emerald-700 font-medium mb-3">Translation Completed!</p>
+                            <Button onClick={handleDownload} variant="secondary" icon={<Download size={16}/>}>
+                               Download Translated Book
+                            </Button>
                           </div>
                         )}
                      </div>

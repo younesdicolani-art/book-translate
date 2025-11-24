@@ -33,27 +33,35 @@ export const translateDocumentStream = async (
           },
           {
             text: `
-              You are an expert translator specializing in literary and technical book translations.
+              You are an expert translator specializing in translating complete books from English to Arabic.
+              
+              **CRITICAL INSTRUCTION**: 
+              Do not delete or summarize any content. Translate EVERYTHING.
               
               Task:
-              Translate the attached English document into high-quality, fluent Arabic. 
+              Translate the attached PDF document into fluent, literary Arabic (Standard Arabic).
               
-              Guidelines:
-              1. **Complete Translation**: Translate the entire text content found in the document. Do not summarize.
-              2. **Structure**: Maintain the original structure (chapters, headings, bullet points) using Markdown.
-              3. **Images/Diagrams**: If you encounter images, diagrams, or charts, do not delete them. Instead, insert a placeholder description in Arabic like: "[صورة: وصف قصير]" (Image: Short description) in the correct location so the reader knows something is there.
-              4. **Formatting**: Use Markdown headers (#, ##, ###) for titles.
-              5. **Direction**: Ensure the output text flows naturally for Arabic readers (RTL context).
+              Detailed Guidelines:
+              1. **Complete Translation**: Translate every sentence, paragraph, and chapter. Do not summarize.
+              2. **Structure Preservation**: You must use Markdown to exactly match the structure of the book:
+                 - Use # for Book Title
+                 - Use ## for Chapter Titles
+                 - Use ### for Subsections
+                 - Preserve lists, tables, and bold text.
+              3. **Images & Diagrams**: **DO NOT IGNORE IMAGES.** 
+                 - Since you cannot generate the image file itself, you MUST insert a descriptive placeholder in the exact location of the image.
+                 - Format: \`> **[صورة: وصف دقيق للصورة هنا]**\` (Image: Detailed description here).
+                 - If the image contains text, translate that text inside the placeholder description.
+              4. **Formatting**: Ensure the output is formatted for Right-to-Left (RTL) reading.
+              5. **Tone**: Maintain the original tone of the book (academic, narrative, technical, etc.).
               
-              Output only the Arabic Markdown translation.
+              Output only the Arabic Markdown translation. Start translating immediately.
             `,
           },
         ],
       },
       config: {
-        // Thinking budget can be helpful for very complex translations, but for a whole book streaming, 
-        // we might just want to let the model decide or standard generation. 
-        // Let's use standard generation for speed in streaming.
+        // Standard generation configuration
       },
     });
 
